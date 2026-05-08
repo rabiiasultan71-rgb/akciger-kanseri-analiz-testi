@@ -13,41 +13,42 @@ def get_base64(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# Belirttiğin görsel yolu
-image_path = r"C:\Users\rabia\Downloads\arkaplan (2).jpg"
+# RENDER VE GITHUB İÇİN DÜZELTİLMİŞ GÖRSEL YOLU
+image_path = "arkaplan.jpg"
 
 try:
-    bin_str = get_base64(image_path)
-    st.markdown(f"""
-    <style>
-    .stApp {{
-        background-image: url("data:image/png;base64,{bin_str}");
-        background-size: cover;
-        background-attachment: fixed;
-    }}
-    .stApp::before {{
-        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(0, 0, 0, 0.82); z-index: -1;
-    }}
-    /* Soru ve yazıların netliği için özel ayarlar */
-    h1, h2, h3, p, label, .stMarkdown {{
-        color: #FFFFFF !important;
-        font-weight: 500 !important;
-        text-shadow: 1px 1px 3px #000000 !important;
-    }}
-    .stRadio label, .stSelectbox label {{
-        font-size: 1.1rem !important;
-        background: rgba(0,0,0,0.3);
-        padding: 5px 10px;
-        border-radius: 5px;
-    }}
-    .stButton>button {{
-        width: 100%; border-radius: 12px; height: 3.5em; background-color: #e63946; 
-        color: white; font-weight: bold; border: none; font-size: 17px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+    if os.path.exists(image_path):
+        bin_str = get_base64(image_path)
+        st.markdown(f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{bin_str}");
+            background-size: cover;
+            background-attachment: fixed;
+        }}
+        .stApp::before {{
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.82); z-index: -1;
+        }}
+        /* Soru ve yazıların netliği için özel ayarlar */
+        h1, h2, h3, p, label, .stMarkdown {{
+            color: #FFFFFF !important;
+            font-weight: 500 !important;
+            text-shadow: 1px 1px 3px #000000 !important;
+        }}
+        .stRadio label, .stSelectbox label {{
+            font-size: 1.1rem !important;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }}
+        .stButton>button {{
+            width: 100%; border-radius: 12px; height: 3.5em; background-color: #e63946; 
+            color: white; font-weight: bold; border: none; font-size: 17px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }}
+        </style>
+        """, unsafe_allow_html=True)
 except:
     st.info("Arka plan görseli yüklenemedi, varsayılan tema ile devam ediliyor.")
 
