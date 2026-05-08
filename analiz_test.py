@@ -42,10 +42,30 @@ try:
             padding: 5px 10px;
             border-radius: 5px;
         }}
+        
+        /* MODERN VE ESTETİK BUTONLAR */
         .stButton>button {{
-            width: 100%; border-radius: 12px; height: 3.5em; background-color: #e63946; 
-            color: white; font-weight: bold; border: none; font-size: 17px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            width: 100%; 
+            border-radius: 25px; 
+            height: 3.2em; 
+            background: linear-gradient(135deg, #e63946 0%, #b22222 100%); 
+            color: white; 
+            font-weight: bold; 
+            border: none; 
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }}
+        .stButton>button:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            background: linear-gradient(135deg, #ff4d5a 0%, #e63946 100%);
+        }}
+        
+        /* Geri Butonu Daha Sade Olsun */
+        div[data-testid="stColumn"]:nth-of-type(1) .stButton>button {{
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
         }}
         </style>
         """, unsafe_allow_html=True)
@@ -193,19 +213,29 @@ elif st.session_state.step == 5:
     if st.session_state.answers.get('genetik') == "Evet": risk_skoru += 15
     risk_skoru = min(risk_skoru, 99)
 
+    # ESTETİK VE İNCE GRAFİK TASARIMI
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = risk_skoru,
-        number = {'suffix': "%", 'font': {'color': "white"}},
+        number = {'suffix': "%", 'font': {'color': "white", 'size': 50}},
         gauge = {
-            'axis': {'range': [0, 100], 'tickcolor': "white"},
-            'bar': {'color': "white"},
+            'axis': {'range': [0, 100], 'tickcolor': "white", 'tickwidth': 2},
+            'bar': {'color': "white", 'thickness': 0.2}, # Çubuğu ciddi oranda incelttik
+            'bgcolor': "rgba(255,255,255,0.1)",
+            'borderwidth': 2,
+            'bordercolor': "rgba(255,255,255,0.3)",
             'steps': [
                 {'range': [0, 30], 'color': "#2a9d8f"},
                 {'range': [30, 70], 'color': "#e9c46a"},
                 {'range': [70, 100], 'color': "#e76f51"}]
         }))
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"})
+    
+    fig.update_layout(
+        height=380,
+        margin=dict(l=30, r=30, t=50, b=20),
+        paper_bgcolor='rgba(0,0,0,0)', 
+        font={'color': "white"}
+    )
     st.plotly_chart(fig)
 
     st.write(f"**Yapay Zeka Doğruluk Oranı: %{round(random.uniform(96.5, 98.2), 1)}**")
