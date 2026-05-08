@@ -96,7 +96,7 @@ elif st.session_state.step == 2:
     genetik = st.radio("Ailenizde akciğer kanseri genetiği var mı?", ["Hayır", "Evet"], horizontal=True)
     if genetik == "Evet":
         st.session_state.answers['yakinlik'] = st.selectbox("Yakınlık derecesi:", 
-            ["Anne, Baba, Kardeş", "Dede, Anane, Babaanne, Teyze, Hala, Amca, Dayı", "Uzaktan Akraba"])
+            ["Anne, Baba, Kardeş", "Dede, Anneanne, Babaanne, Teyze, Hala, Amca, Dayı", "Uzaktan Akraba"])
 
     col1, col2 = st.columns(2)
     with col1:
