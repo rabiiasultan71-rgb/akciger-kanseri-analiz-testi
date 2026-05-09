@@ -3,95 +3,125 @@ import plotly.graph_objects as go
 import random
 import base64
 import os
+import time
 
-# Sayfa Ayarları
-st.set_page_config(page_title="Akciğer Sağlığı Analiz Sistemi", layout="centered")
+# --- SAYFA AYARLARI ---
+st.set_page_config(page_title="LUNG AI | Profesyonel Analiz", layout="centered")
 
-# --- ARKA PLAN VE TASARIM ---
+# --- ARKA PLAN VE GLASSMORPHISM TASARIMI ---
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
-image_path = "arkaplan.jpg"
+# Senin bilgisayarındaki özel yol
+image_path = r"C:\Users\rabia\Downloads\arkaplan (2).jpg"
 
 try:
-    if os.path.exists(image_path):
-        bin_str = get_base64(image_path)
-        st.markdown(f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/png;base64,{bin_str}");
-            background-size: cover;
-            background-attachment: fixed;
-        }}
-        .stApp::before {{
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.88); z-index: -1;
-        }}
-        
-        /* İNCE BEYAZ YAZILAR */
-        h1, h2, h3 {{
-            color: #FFFFFF !important;
-            font-weight: 300 !important; /* İnce yazı tipi */
-            letter-spacing: 1px;
-        }}
-        p, label, .stMarkdown {{
-            color: #FFFFFF !important;
-            font-weight: 300 !important;
-            font-size: 0.95rem !important;
-        }}
+    bin_str = get_base64(image_path)
+    bg_style = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/png;base64,{bin_str}");
+        background-size: cover;
+        background-attachment: fixed;
+    }}
+    .stApp::before {{
+        content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.85); /* Karartma efekti */
+        z-index: -1;
+    }}
+    
+    /* CAM EFEKTİ (Glassmorphism) KUTULARI */
+    .stSelectbox, .stRadio, .stTextInput {{
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px !important;
+        padding: 10px !important;
+        backdrop-filter: blur(5px);
+    }}
 
-        /* KÜÇÜK VE SADE BUTONLAR */
-        .stButton>button {{
-            width: auto !important;
-            padding: 5px 25px !important;
-            border-radius: 5px !important;
-            background-color: rgba(255, 255, 255, 0.08) !important;
-            color: #FFFFFF !important;
-            font-weight: 300 !important;
-            font-size: 14px !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            transition: all 0.3s ease;
-        }}
-        
-        .stButton>button:hover {{
-            background-color: rgba(255, 255, 255, 0.15) !important;
-            border: 1px solid #FFFFFF !important;
-        }}
+    /* İNCE BEYAZ YAZILAR */
+    h1, h2, h3 {{
+        color: #FFFFFF !important;
+        font-weight: 200 !important;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }}
+    p, label, .stMarkdown {{
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-weight: 200 !important;
+    }}
 
-        /* RADİO VE SELECTBOX SADELEŞTİRME */
-        .stSelectbox, .stRadio {{
-            background: transparent !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+    /* SADE VE KÜÇÜK BUTONLAR */
+    .stButton>button {{
+        background: transparent !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 4px !important;
+        font-weight: 200 !important;
+        padding: 4px 20px !important;
+        font-size: 13px !important;
+        transition: 0.3s;
+    }}
+    .stButton>button:hover {{
+        border-color: #00f2ff !important;
+        background: rgba(0, 242, 255, 0.05) !important;
+    }}
+    </style>
+    """
+    st.markdown(bg_style, unsafe_allow_html=True)
 except:
-    st.info("Görsel yüklenemedi.")
+    st.warning("Arka plan dosyası bulunamadı, lütfen dosya yolunu kontrol edin.")
 
-# Durum Yönetimi
+# --- DURUM YÖNETİMİ ---
 if 'step' not in st.session_state: st.session_state.step = 1
 if 'answers' not in st.session_state: st.session_state.answers = {}
 
-# --- ADIM 1: TEMEL BİLGİLER ---
+# --- 1. ADIM: GİRİŞ EKRANI ---
 if st.session_state.step == 1:
     st.title("Kişisel Bilgiler")
-    yas_input = st.text_input("Yaşınız:", value="25")
-    cinsiyet = st.selectbox("Cinsiyetiniz:", ["Seçiniz", "Erkek", "Kadın"])
     
+    yas_raw = st.text_input("Yaşınız (18-85):", value="25")
+    
+    # Yaş Kontrolleri
+    age_valid = False
+    if not yas_raw.isdigit():
+        st.error("🚨 Harf veya ondalıklı sayı girilemez.")
+    else:
+        yas = int(yas_raw)
+        if yas > 85:
+            st.error("🚨 Yaş 85’ten büyük olamaz.")
+        elif yas < 18:
+            st.error("🚨 Lütfen geçerli bir yaş giriniz (18+).")
+        else:
+            age_valid = True
+
+    cinsiyet = st.selectbox("Cinsiyetiniz:", ["Seçiniz", "Erkek", "Kadın"])
+
     if st.button("İlerle"):
-        if cinsiyet != "Seçiniz":
-            st.session_state.answers['yas'] = yas_input
+        if age_valid and cinsiyet != "Seçiniz":
+            st.session_state.answers['yas'] = yas
             st.session_state.answers['cinsiyet'] = cinsiyet
             st.session_state.step = 2
             st.rerun()
 
-# --- ADIM 2: SAĞLIK GEÇMİŞİ ---
+# --- 2. ADIM: SAĞLIK GEÇMİŞİ ---
 elif st.session_state.step == 2:
     st.title("Sağlık Geçmişi")
-    kronik = st.radio("Kronik rahatsızlık?", ["Hayır", "Evet"], horizontal=True)
-    genetik = st.radio("Ailede genetik geçmiş?", ["Hayır", "Evet"], horizontal=True)
     
+    kronik = st.radio("Kronik bir rahatsızlığınız var mı?", ["Hayır", "Evet"], horizontal=True)
+    if kronik == "Evet":
+        st.session_state.answers['kronik_tip'] = st.selectbox("Rahatsızlığınız nedir?", 
+            ["KOAH", "Astım", "Bronşit", "Akciğer enfeksiyonu", "Diğer"])
+    
+    st.divider()
+    
+    genetik = st.radio("Ailenizde akciğer kanseri geçmişi var mı?", ["Hayır", "Evet"], horizontal=True)
+    if genetik == "Evet":
+        st.session_state.answers['yakinlik'] = st.selectbox("Yakınlık derecesi:", 
+            ["Anne / Baba / Kardeş", "Dede / Anneanne / Babaanne", "Teyze / Hala / Amca / Dayı", "Uzak akraba"])
+
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("Geri"): st.session_state.step = 1; st.rerun()
@@ -101,12 +131,22 @@ elif st.session_state.step == 2:
             st.session_state.step = 3
             st.rerun()
 
-# --- ADIM 3: ALIŞKANLIKLAR ---
+# --- 3. ADIM: ALIŞKANLIKLAR ---
 elif st.session_state.step == 3:
     st.title("Alışkanlıklar")
-    sigara = st.radio("Sigara kullanımı?", ["Hayır", "Evet"], horizontal=True)
-    alkol = st.radio("Alkol kullanımı?", ["Hayır", "Evet"], horizontal=True)
     
+    sigara = st.radio("Sigara kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
+    if sigara == "Evet":
+        st.session_state.answers['sigara_siklik'] = st.selectbox("Ne sıklıkla?", 
+            ["Günde birkaç tane", "Günde yarım paket", "Günde bir paket", "Günde bir paketten fazla"])
+
+    st.divider()
+    
+    alkol = st.radio("Alkol kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
+    if alkol == "Evet":
+        st.session_state.answers['alkol_siklik'] = st.selectbox("Sıklık:", 
+            ["Özel günlerde", "Ayda bir", "Haftada birkaç kez", "Her gün"])
+
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("Geri"): st.session_state.step = 2; st.rerun()
@@ -117,13 +157,24 @@ elif st.session_state.step == 3:
             st.session_state.step = 4
             st.rerun()
 
-# --- ADIM 4: ŞİKAYETLER ---
+# --- 4. ADIM: BELİRTİ VE ŞİKAYETLER ---
 elif st.session_state.step == 4:
-    st.title("Mevcut Şikayetler")
-    oksuruk = st.radio("Öksürük?", ["Hayır", "Evet"], horizontal=True)
-    if oksuruk == "Evet":
-        st.session_state.answers['oksuruk_tip'] = st.selectbox("Tip:", ["Hafif", "Sık", "Kanlı"])
-    nefes = st.radio("Nefes darlığı?", ["Hayır", "Evet"], horizontal=True)
+    st.title("Belirtiler")
+    
+    with st.expander("Ağrı ve Öksürük", expanded=True):
+        gogus = st.radio("Göğüs ağrısı/baskı var mı?", ["Hayır", "Evet"], horizontal=True)
+        oksuruk = st.radio("Sürekli öksürük var mı?", ["Hayır", "Evet"], horizontal=True)
+        if oksuruk == "Evet":
+            st.session_state.answers['oksuruk_tip'] = st.selectbox("Öksürük Tipi:", ["Hafif kuru", "Sık balgamlı", "Şiddetli", "Kanlı"])
+
+    with st.expander("Solunum ve Fiziksel"):
+        nefes = st.radio("Nefes darlığı var mı?", ["Hayır", "Evet"], horizontal=True)
+        yutkunma = st.radio("Yutkunma güçlüğü var mı?", ["Hayır", "Evet"], horizontal=True)
+        parmak = st.radio("Parmaklarda sararma var mı?", ["Hayır", "Evet"], horizontal=True)
+
+    with st.expander("Genel Durum"):
+        stres = st.radio("Yoğun stres/anksiyete?", ["Hayır", "Evet"], horizontal=True)
+        halsizlik = st.radio("Aşırı yorgunluk/halsizlik?", ["Hayır", "Evet"], horizontal=True)
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -133,50 +184,68 @@ elif st.session_state.step == 4:
             st.session_state.step = 5
             st.rerun()
 
-# --- ADIM 5: ANALİZ SONUCU ---
+# --- 5. ADIM: ANALİZ SONUÇLARI ---
 elif st.session_state.step == 5:
-    st.title("Analiz Sonucu")
-    
-    risk_skoru = 10
-    if st.session_state.answers.get('sigara') == "Evet": risk_skoru += 35
-    if st.session_state.answers.get('oksuruk_tip') == "Kanlı": risk_skoru += 30
-    if st.session_state.answers.get('genetik') == "Evet": risk_skoru += 15
-    risk_skoru = min(risk_skoru, 99)
+    # LOADING ANİMASYONU
+    with st.status("AI Analiz Yapılıyor...", expanded=True) as status:
+        st.write("Veriler işleniyor...")
+        time.sleep(1)
+        st.write("Risk faktörleri taranıyor...")
+        time.sleep(1)
+        status.update(label="Analiz Tamamlandı!", state="complete", expanded=False)
 
-    # EKSTRA İNCE VE CANLI RENKLİ GRAFİK
+    st.title("Analiz Raporu")
+    
+    # RİSK HESAPLAMA MANTIĞI
+    score = 10
+    if st.session_state.answers.get('sigara') == "Evet": score += 30
+    if st.session_state.answers.get('oksuruk_tip') == "Kanlı": score += 35
+    if st.session_state.answers.get('genetik') == "Evet": score += 15
+    score = min(score, 99)
+
+    # İNCE GRAFİK SİSTEMİ
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
-        value = risk_skoru,
-        number = {'suffix': "%", 'font': {'color': "#00f2ff", 'size': 55, 'weight': 'lighter'}},
+        value = score,
+        number = {'suffix': "%", 'font': {'color': "#FFFFFF", 'weight': 'lighter'}},
         gauge = {
-            'axis': {'range': [0, 100], 'tickcolor': "white", 'tickwidth': 1, 'ticklen': 1},
-            'bar': {'color': "rgba(0, 242, 255, 0.8)", 'thickness': 0.1}, # Maksimum incelik
-            'bgcolor': "rgba(255,255,255,0.02)",
-            'borderwidth': 0,
+            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "white"},
+            'bar': {'color': "#00f2ff", 'thickness': 0.05}, # İNCE ÇİZGİ
+            'bgcolor': "rgba(255,255,255,0.05)",
             'steps': [
-                {'range': [0, 30], 'color': "#00ffcc"}, # Canlı Turkuaz/Yeşil
-                {'range': [30, 70], 'color': "#ffcc00"}, # Parlak Sarı
-                {'range': [70, 100], 'color': "#ff3366"}] # Canlı Neon Pembe/Kırmızı
+                {'range': [0, 30], 'color': "#00ff88"},
+                {'range': [30, 70], 'color': "#ffcc00"},
+                {'range': [70, 100], 'color': "#ff4444"}]
         }))
-    
-    fig.update_layout(
-        height=320, margin=dict(l=50, r=50, t=20, b=20),
-        paper_bgcolor='rgba(0,0,0,0)', font={'family': "sans-serif"}
-    )
+    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"})
     st.plotly_chart(fig, use_container_width=True)
 
-    # ŞIK VE İNCE MOTİVASYON KUTULARI
-    if risk_skoru > 70:
-        st.markdown(f'<div style="padding:15px; border-radius:10px; background: rgba(255,51,102,0.1); border-left: 3px solid #ff3366; font-weight:300;">'
-                    f'<span style="color:#ff3366;">🚨 YÜKSEK RİSK:</span> Belirtileriniz hassas. Uzman görüşü almanız önemlidir.</div>', unsafe_allow_html=True)
-    elif 30 < risk_skoru <= 70:
-        st.markdown(f'<div style="padding:15px; border-radius:10px; background: rgba(255,204,0,0.1); border-left: 3px solid #ffcc00; font-weight:300;">'
-                    f'<span style="color:#ffcc00;">🟡 DİKKAT:</span> Yaşam tarzı değişiklikleri sağlığınızı koruyabilir.</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="padding:15px; border-radius:10px; background: rgba(0,255,204,0.1); border-left: 3px solid #00ffcc; font-weight:300;">'
-                    f'<span style="color:#00ffcc;">✨ HARİKA:</span> Mevcut tablonuz oldukça sağlıklı görünüyor.</div>', unsafe_allow_html=True)
+    # RADAR CHART (Faktör Etkisi)
+    categories = ['Sigara', 'Genetik', 'Semptom', 'Yaş', 'Kronik']
+    fig_radar = go.Figure(data=go.Scatterpolar(
+      r=[40 if st.session_state.answers.get('sigara')=="Evet" else 10, 
+         30 if st.session_state.answers.get('genetik')=="Evet" else 5,
+         50 if score > 50 else 20,
+         score/2,
+         25 if 'kronik_tip' in st.session_state.answers else 0],
+      theta=categories,
+      fill='toself',
+      line_color='#00f2ff'
+    ))
+    fig_radar.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False)), 
+                            paper_bgcolor='rgba(0,0,0,0)', font_color="white", height=300)
+    st.plotly_chart(fig_radar)
 
-    st.markdown(f"<p style='text-align:center; opacity:0.6; font-size:12px; margin-top:20px;'>Yapay Zeka Doğruluk Oranı: %{round(random.uniform(97.5, 98.8), 1)}</p>", unsafe_allow_html=True)
+    # AI YORUM VE ÖNERİLER
+    if score > 70:
+        st.error("⚠️ YÜKSEK RİSK: Belirtileriniz ve alışkanlıklarınız ciddi bir tablo çiziyor.")
+        st.info("🏥 Gidilmesi Gereken Bölümler: Göğüs Hastalıkları, Onkoloji.")
+    else:
+        st.success("✨ DÜŞÜK RİSK: Akciğer sağlığınız şu an için stabil görünüyor.")
+        st.info("🏃 Öneri: Düzenli yürüyüş ve nefes egzersizlerine devam edin.")
+
+    st.markdown("---")
+    st.caption("🤖 Bu analiz yapay zekâ destekli tahmini bir değerlendirmedir. Kesin teşhis yerine geçmez.")
     
     if st.button("Tekrar Başlat"):
         st.session_state.step = 1; st.rerun()
