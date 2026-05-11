@@ -207,7 +207,7 @@ elif st.session_state.step == 5:
     st.title("📊 Akıllı Risk Analiz Raporu")
     
     # GERÇEKÇİ RİSK ALGORİTMASI
-    risk = 10 # Temel risk (0-85 yaş ve ondalık sayı kontrolleri yapıldı)
+    risk = 10 
     
     if st.session_state.data.get('yas') > 40: risk += 5
     if st.session_state.data.get('yas') > 60: risk += 5
@@ -224,17 +224,17 @@ elif st.session_state.step == 5:
     
     risk = min(risk, 99) # Maksimum sınır kontrolü
 
-    # CANLI VE İNCE GRAFİK (Turkuaz dolgu ve ince çizgi)
+    # GÜNCELLENEN GRAFİK ARALIKLARI (0-33, 34-66, 67-100)
     fig = go.Figure(go.Indicator(
         mode = "gauge+number", value = risk,
         number = {'suffix': "%", 'font': {'color': "#00FFFF", 'size': 50}},
         gauge = {
             'axis': {'range': [0, 100], 'tickcolor': "white"},
-            'bar': {'color': "#00FFFF", 'thickness': 0.1}, # İnce çizgi halinde
+            'bar': {'color': "#00FFFF", 'thickness': 0.1}, 
             'steps': [
-                {'range': [0, 30], 'color': "#00ff88"},
-                {'range': [30, 70], 'color': "#ffcc00"},
-                {'range': [70, 100], 'color': "#ff4444"}]
+                {'range': [0, 33], 'color': "#00ff88"},   # Düşük
+                {'range': [34, 66], 'color': "#ffcc00"},  # Orta
+                {'range': [67, 100], 'color': "#ff4444"}] # Yüksek
         }))
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"}, height=300)
     st.plotly_chart(fig, use_container_width=True)
@@ -242,37 +242,43 @@ elif st.session_state.step == 5:
     # AKILLI RİSK YORUMLAMA
     st.subheader("🤖 AI Risk Analiz Yorumu")
     
-    # Alkol Uyarıları (Gelişmiş)
+    # --- GENEL RİSK DURUMU MESAJLARI (YENİ ARALIKLARA GÖRE) ---
+    if risk <= 33:
+        st.markdown("### ✨ Düşük Risk")
+        st.success("✅ Risk oranınız düşük seviye belirlenmiştir. Sağlığınızı korumak için şu adımları izleyin:")
+        st.write("Düzenli yürüyüş, Nefes egzersizi, Sigaradan uzak durma, Düzenli uyku ve Sağlıklı beslenme.")
+    elif 34 <= risk <= 66:
+        st.markdown("### ⚠️ Orta Risk")
+        st.warning("🟡 Risk oranınız orta seviyede belirlenmiştir. Yaşam alışkanlıklarınızı gözden geçirmeniz önerilir.")
+        st.write("Motivasyon: Sağlığınız için küçük değişiklikler büyük farklar yaratabilir.")
+    else:
+        st.markdown("### 🛑 Dikkat: Yüksek Risk")
+        st.error("🚨 Analiz sonucunuz yüksek risk grubunda olduğunuzu göstermektedir.")
+        st.write("Motivasyon: Sağlığınız için adım atmak asla geç değildir. Belirtileriniz tıbbi profesyonel denetimi gerektiriyor.")
+        st.info("🏥 **Önerilen Bölümler (Oncology & Internal Medicine):** Göğüs Hastalıkları, Onkoloji, Dahiliye")
+
+    # --- ÖZEL UYARILAR (Senin tüm uyarıların burada korunuyor) ---
+    st.markdown("---")
+    
+    # Alkol Uyarıları
     if st.session_state.data.get('alkol_siklik') in ["Haftada birkaç kez", "Her gün"]:
         st.warning("⚠️ Yoğun alkol kullanımı bağışıklık ve solunum sistemi üzerinde olumsuz etkilere neden olabilir.")
         if risk > 60:
             st.write("*Sigara ve yoğun alkol kullanımı birlikte değerlendirildiğinde akciğer hastalıkları riski artmış olabilir.*")
 
-    # Genetik Faktör Analizi (1. Derece ve Puan Birleşimi)
+    # Genetik Faktör Analizi
     is_first_degree = st.session_state.data.get('yakinlik') == " Anne-Baba-Kardeş"
     if st.session_state.data.get('genetik') == "Evet":
-        if risk > 70 and is_first_degree:
+        if risk > 66 and is_first_degree: # Yeni sınıra göre güncelledim
             st.error("⚠️ Birinci derece aile bireylerinde akciğer kanseri öyküsü bulunması genetik risk faktörünü artırabilir. Uzman doktora başvurmanız önerilir.")
-        elif risk >= 40 and is_first_degree:
+        elif risk >= 34 and is_first_degree: # Yeni sınıra göre güncelledim
             st.warning("⚠️ Aile geçmişiniz nedeniyle düzenli kontrol yaptırmanız önerilir.")
 
-    # Sigara Uyarıları (Yoğun Kullanım)
+    # Sigara Uyarıları
     if st.session_state.data.get('sigara_siklik') in ["Günde bir paket", "Günde bir paketten fazla"]:
         st.error("⚠️ Uzun süreli yoğun sigara kullanımı akciğer kanseri riskini ciddi oranda artırabilir.")
 
-    # GENEL ÖNERİLER VE MOTİVASYON
-    if risk > 60:
-        st.markdown("### 🛑 Dikkat: Yüksek Risk")
-        st.write("Motivasyon: Sağlığınız için adım atmak asla geç değildir. Belirtileriniz tıbbi profesyonel denetimi gerektiriyor.")
-        # Doktor Önerileri (Oncology, Internal Medicine)
-        st.info("🏥 **Önerilen Bölümler (Oncology & Internal Medicine):** Göğüs Hastalıkları, Onkoloji, Dahiliye")
-    else:
-        st.markdown("### ✨ Düşük Risk Önerileri")
-        st.write("Sağlığınızı korumak için şu adımları izleyin:")
-        st.success("✅ Düzenli yürüyüş, Nefes egzersizi, Sigaradan uzak durma, Düzenli uyku ve Sağlıklı beslenme.")
-
     st.markdown("---")
-    # Sayfa Altı Bilgilendirme Notu
     st.caption("“Bu analiz yapay zekâ tarafından oluşturulmuştur. Kesin teşhis yerine geçmez. Sağlık durumunuz için uzman doktora başvurunuz.”")
     
     if st.button("Yeniden Başlat"): 
