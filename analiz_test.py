@@ -5,7 +5,7 @@ import os
 import time
 
 # --- SAYFA YAPILANDIRMASI ---
-st.set_page_config(page_title="LUNG AI | Akıllı Risk Analizi", layout="centered")
+st.set_page_config(page_title="LUNG AI | Akciğer Risk Analizi", layout="centered")
 
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
@@ -13,7 +13,7 @@ def get_base64(bin_file):
     return base64.b64encode(data).decode()
 
 # Render ve GitHub için görsel yolu
-image_path = "arkaplan.jpg" 
+image_path = "arkaplan (2).jpg" 
 
 if os.path.exists(image_path):
     bin_str = get_base64(image_path)
