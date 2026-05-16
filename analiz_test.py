@@ -5,51 +5,68 @@ import os
 import time
 import joblib
 import numpy as np
-import sqlite3
+import psycopg2  # Eski sqlite3 yerine PostgreSQL kütüphanesini ekledik
 from datetime import datetime
 
 # --- VERİ TABANI AYARLARI ---
-def veritabani_kur():
-    conn = sqlite3.connect("analiz_verileri.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS analizler (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tarih TEXT,
-            yas INTEGER,
-            cinsiyet TEXT,
-            sigara TEXT,
-            alkol TEXT,
-            kronik TEXT,
-            gogus_agrisi TEXT,
-            oksuruk TEXT,
-            nefes_darligi TEXT,
-            yutkunma_guclugu TEXT,
-            stres_anksiyete TEXT,
-            yorgunluk TEXT,
-            parmak_sararma TEXT,
-            risk_skoru INTEGER
-        )
-    """)
-    conn.commit()
-    conn.close()
+# Streamlit Secrets kısmına kaydettiğimiz gizli bağlantı linkini çekiyoruz
+DB_URL = st.secrets["database"]["url"]
 
-# Veri tabanını ilk açılışta oluştur
+def veritabani_kur():
+    """Render PostgreSQL üzerinde tablo yoksa otomatik oluşturur"""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS analizler (
+                id SERIAL PRIMARY KEY,
+                tarih TEXT,
+                yas INTEGER,
+                cinsiyet TEXT,
+                sigara TEXT,
+                alkol TEXT,
+                kronik TEXT,
+                gogus_agrisi TEXT,
+                oksuruk TEXT,
+                nefes_darligi TEXT,
+                yutkunma_guclugu TEXT,
+                stres_anksiyete TEXT,
+                yorgunluk TEXT,
+                parmak_sararma TEXT,
+                risk_skoru INTEGER
+            )
+        """)
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        st.error(f"Veri tabanı kurulum hatası: {e}")
+
+# Veri tabanını ilk açılışta kontrol et ve oluştur
 veritabani_kur()
 
 def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk):
-    conn = sqlite3.connect("analiz_verileri.db")
-    cursor = conn.cursor()
-    tarih_suan = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("""
-        INSERT INTO analizler (
-            tarih, yas, cinsiyet, sigara, alkol, kronik, gogus_agrisi, 
-            oksuruk, nefes_darligi, yutkunma_guclugu, stres_anksiyete, 
-            yorgunluk, parmak_sararma, risk_skoru
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (tarih_suan, yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk))
-    conn.commit()
-    conn.close()
+    """Kullanıcı verilerini kalıcı olarak Render PostgreSQL'e kaydeder"""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cursor = conn.cursor()
+        tarih_suan = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # PostgreSQL uyumlu SQL sorgusu (%s işaretleri kullanıldı)
+        cursor.execute("""
+            INSERT INTO analizler (
+                tarih, yas, cinsiyet, sigara, alkol, kronik, gogus_agrisi, 
+                oksuruk, nefes_darligi, yutkunma_guclugu, stres_anksiyete, 
+                yorgunluk, parmak_sararma, risk_skoru
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (tarih_suan, yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        st.toast("💾 Analiz verileri başarıyla gerçek PostgreSQL veri tabanına kaydedildi!", icon="💾")
+    except Exception as e:
+        st.error(f"Veri tabanına kaydetme hatası: {e}")
 
 # --- MODELİ YÜKLEME ---
 @st.cache_resource
@@ -250,21 +267,21 @@ elif st.session_state.step == 5:
 
     # --- MODELİN SÜTUN SIRALAMASINA GÖRE BİREBİR EŞLEME ---
     veriler = [
-        1 if d.get('cinsiyet') == "Erkek" else 0,                       # GENDER
-        d.get('yas', 45),                                               # AGE
-        2 if d.get('sigara') == "Evet" else 1,                         # SMOKING
-        2 if d.get('parmak') == "Evet" else 1,                         # YELLOW_FINGERS
-        2 if d.get('stres') == "Evet" else 1,                          # ANXIETY
+        1 if d.get('cinsiyet') == "Erkek" else 0,                               # GENDER
+        d.get('yas', 45),                                                       # AGE
+        2 if d.get('sigara') == "Evet" else 1,                                 # SMOKING
+        2 if d.get('parmak') == "Evet" else 1,                                 # YELLOW_FINGERS
+        2 if d.get('stres') == "Evet" else 1,                                  # ANXIETY
         2 if d.get('sigara') == "Evet" or d.get('alkol') == "Evet" else 1, # PEER_PRESSURE
-        2 if d.get('kronik') == "Evet" else 1,                         # CHRONIC_DISEASE
-        2 if d.get('yorgunluk') == "Evet" else 1,                      # FATIGUE
+        2 if d.get('kronik') == "Evet" else 1,                                 # CHRONIC_DISEASE
+        2 if d.get('yorgunluk') == "Evet" else 1,                              # FATIGUE
         2 if d.get('genetik') == "Evet" or d.get('kronik') == "Evet" else 1, # ALLERGY
-        2 if d.get('nefes') == "Evet" else 1,                          # WHEEZING
-        2 if d.get('alkol') == "Evet" else 1,                          # ALCOHOL_CONSUMING
-        2 if d.get('oksuruk') == "Evet" else 1,                        # COUGHING
-        2 if d.get('nefes') == "Evet" else 1,                          # SHORTNESS_OF_BREATH
-        2 if d.get('yutkunma') == "Evet" else 1,                       # SWALLOWING_DIFFICULTY
-        2 if d.get('g_a') == "Evet" else 1                             # CHEST_PAIN
+        2 if d.get('nefes') == "Evet" else 1,                                  # WHEEZING
+        2 if d.get('alkol') == "Evet" else 1,                                  # ALCOHOL_CONSUMING
+        2 if d.get('oksuruk') == "Evet" else 1,                                # COUGHING
+        2 if d.get('nefes') == "Evet" else 1,                                  # SHORTNESS_OF_BREATH
+        2 if d.get('yutkunma') == "Evet" else 1,                               # SWALLOWING_DIFFICULTY
+        2 if d.get('g_a') == "Evet" else 1                                     # CHEST_PAIN
     ]
     
     # Modelden saf olasılık sonucunu alıyoruz
@@ -292,7 +309,6 @@ elif st.session_state.step == 5:
             d.get('yorgunluk'), d.get('parmak'), risk
         )
         st.session_state.kaydedildi = True
-        st.toast("💾 Analiz verileri başarıyla SQLite veri tabanına kaydedildi!", icon="💾")
 
     # GRAFİK GÖSTERİMİ
     fig = go.Figure(go.Indicator(
@@ -302,9 +318,9 @@ elif st.session_state.step == 5:
             'axis': {'range': [0, 100], 'tickcolor': "white"},
             'bar': {'color': "#00FFFF", 'thickness': 0.1}, 
             'steps': [
-                {'range': [0, 33], 'color': "#00ff88"},
-                {'range': [34, 66], 'color': "#ffcc00"},
-                {'range': [67, 100], 'color': "#ff4444"}]
+                {'range': [0, 33], 'color': "#055630"},
+                {'range': [34, 66], 'color': "#eabb02"},
+                {'range': [67, 100], 'color': "#af1313e0"}]
         }))
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"}, height=300)
     st.plotly_chart(fig, use_container_width=True)
@@ -322,23 +338,4 @@ elif st.session_state.step == 5:
     else:
         st.markdown("### 🛑 Dikkat: Yüksek Risk")
         st.error("🚨 Analiz sonucunuz yüksek risk grubunda olduğunuzu göstermektedir.")
-        st.write("Motivasyon: Sağlığınız için adım atmak asla geç değildir. Belirtileriniz tıbbi profesyonel denetimi gerektiriyor.")
-        st.info("🏥 **Önerilen Bölümler:** Göğüs Hastalıkları, Onkoloji, Dahiliye")
-
-    st.markdown("---")
-    
-    # Alkol Uyarıları
-    if d.get('alkol_siklik') in ["Haftada birkaç kez", "Her gün"]:
-        st.warning("⚠️ Yoğun alkol kullanımı bağışıklık ve solunum sistemi üzerinde olumsuz etkilere neden olabilir.")
-
-    # Genetik Faktör Analizi
-    is_first_degree = d.get('yakinlik') == " Anne-Baba-Kardeş"
-    if d.get('genetik') == "Evet":
-        if risk > 66 and is_first_degree:
-            st.error("⚠️ Birinci derece akrabalarınızda kanser öyküsü ve yüksek risk skorunuz sebebiyle tarama yaptırmanız hayati önem taşıyabilir.")
-
-    if st.button("Yeni Analiz Yap"):
-        st.session_state.step = 1
-        st.session_state.data = {}
-        if 'kaydedildi' in st.session_state: del st.session_state.kaydedildi
-        st.rerun()
+        st.write("Motivasyon: Sağlığınız için adım atmak asla geç değildir. Belirtileriniz tıbbi profesyonel denetimi gerektir")
