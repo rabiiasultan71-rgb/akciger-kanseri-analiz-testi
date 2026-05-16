@@ -320,7 +320,7 @@ elif st.session_state.step == 5:
             'steps': [
                 {'range': [0, 33], 'color': "#055630"},
                 {'range': [34, 66], 'color': "#eabb02"},
-                {'range': [67, 100], 'color': "#af1313e0"}]
+                {'range': [67, 100], 'color': "#af1313"}]
         }))
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"}, height=300)
     st.plotly_chart(fig, use_container_width=True)
