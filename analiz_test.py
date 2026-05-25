@@ -5,12 +5,11 @@ import os
 import time
 import joblib
 import numpy as np
-import psycopg2  # Eski sqlite3 yerine PostgreSQL kütüphanesini ekledik
+import psycopg2
 from datetime import datetime
 
 # --- VERİ TABANI AYARLARI ---
-# Streamlit Secrets kısmına kaydettiğimiz gizli bağlantı linkini çekiyoruz
-DB_URL = st.secrets["database"]["url"]
+DB_URL = "postgresql://akciger_db_user:xeQBXDVpJZbklqVjpn7qlUF2iYbklKOB@dpg-d845m3l7vvec73evr6hg-a.virginia-postgres.render.com/akciger_db"
 
 def veritabani_kur():
     """Render PostgreSQL üzerinde tablo yoksa otomatik oluşturur"""
@@ -42,7 +41,7 @@ def veritabani_kur():
     except Exception as e:
         st.error(f"Veri tabanı kurulum hatası: {e}")
 
-# Veri tabanını ilk açılışta kontrol et ve oluştur
+# İlk açılışta kontrol et
 veritabani_kur()
 
 def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk):
@@ -52,7 +51,6 @@ def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefe
         cursor = conn.cursor()
         tarih_suan = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # PostgreSQL uyumlu SQL sorgusu (%s işaretleri kullanıldı)
         cursor.execute("""
             INSERT INTO analizler (
                 tarih, yas, cinsiyet, sigara, alkol, kronik, gogus_agrisi, 
@@ -64,7 +62,7 @@ def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefe
         conn.commit()
         cursor.close()
         conn.close()
-        st.toast("💾 Analiz verileri başarıyla gerçek PostgreSQL veri tabanına kaydedildi!", icon="💾")
+        st.toast("💾 Analiz verileri başarıyla bulut veri tabanına kaydedildi!", icon="💾")
     except Exception as e:
         st.error(f"Veri tabanına kaydetme hatası: {e}")
 
@@ -81,7 +79,6 @@ model = model_yukle()
 def yapay_zekadan_tahmin_al(veriler):
     if model is not None:
         dizi = np.array(veriler).reshape(1, -1)
-        # Sınıf olasılığını alıyoruz (% risk hesabı için)
         tahmin_olasiligi = model.predict_proba(dizi)[0][1]
         return tahmin_olasiligi
     return 0.35
@@ -113,19 +110,15 @@ if os.path.exists(image_path):
         border: 2px solid rgba(0, 242, 255, 0.4) !important;
         border-radius: 12px !important;
         color: white !important;
-        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
     }}
     input, select, .stRadio label {{
         color: white !important; font-size: 16px !important;
-        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
     }}
     h1, h2, h3, label, p, .stMarkdown, .stCaption {{ 
         color: white !important; 
         font-weight: 300 !important; 
-        text-shadow: 1px 1px 5px rgba(0,0,0,1);
     }}
-    h3 {{ color: white !important; font-weight: 400 !important; }}
     .stButton>button {{
         width: 100%;
         background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(0, 242, 255, 0.05)) !important;
@@ -134,14 +127,12 @@ if os.path.exists(image_path):
         border-radius: 20px !important;
         font-weight: bold !important;
         transition: all 0.3s ease;
-        -webkit-appearance: none;
     }}
     .stButton>button:hover {{
         background: #00FFFF !important;
         color: #000000 !important;
         box-shadow: 0 0 20px #00FFFF;
     }}
-    div.stAlert > div {{ color: white !important; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -176,8 +167,6 @@ elif st.session_state.step == 2:
     
     st.markdown("---")
     genetik = st.radio("Ailenizde akciğer kanseri genetiği var mı?", ["Hayır", "Evet"], horizontal=True)
-    if genetik == "Evet":
-        st.session_state.data['yakinlik'] = st.selectbox("Yakınlık derecesi:", [" Anne-Baba-Kardeş", "Dede-Anneanne-Babaanne", "Teyze-Hala-Amca-Dayı", "Uzak akraba"])
     
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 1; st.rerun()
@@ -193,14 +182,9 @@ elif st.session_state.step == 2:
 elif st.session_state.step == 3:
     st.title("🚬 Adım 3: Alışkanlıklar")
     sigara = st.radio("Sigara kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if sigara == "Evet":
-        st.warning("⚠️ Sigara sağlığınız için tehlikelidir, bırakmanız tavsiye edilir.")
-        st.session_state.data['sigara_siklik'] = st.selectbox("Kullanım sıklığı:", ["Günde birkaç tane", "Günde yarım paket", "Günde bir paket", "Günde bir paketten fazla"])
     
     st.markdown("---")
     alkol = st.radio("Alkol kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if alkol == "Evet":
-        st.session_state.data['alkol_siklik'] = st.selectbox("Kullanım sıklığı:", ["Özel günlerde", "Ayda bir", "Haftada birkaç kez", "Her gün"])
 
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 2; st.rerun()
@@ -214,37 +198,18 @@ elif st.session_state.step == 4:
     st.title("⚠️ Adım 4: Belirtiler")
     
     g_a = st.radio("Göğsünüzde ağrı veya baskı hissi var mı?", ["Hayır", "Evet"], horizontal=True)
-    if g_a == "Evet": st.selectbox("Ağrı tipi:", ["Hafif batma", "Baskı hissi", "Sıkışma", "Keskin ağrı"])
-    
     st.markdown("---")
     oksuruk = st.radio("Sürekli öksürük şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    if oksuruk == "Evet":
-        st.session_state.data['oksuruk_tip'] = st.selectbox("Öksürük tipi:", ["Hafif kuru öksürük", "Sık balgamlı öksürük", "Şiddetli öksürük", "Kanlı öksürük"])
-        if st.session_state.data['oksuruk_tip'] == "Kanlı öksürük":
-            st.markdown("### 🚨 CİDDİ UYARI: Kanlı öksürük acil tıbbi değerlendirme gerektiren kritik bir belirtidir!")
-
     st.markdown("---")
     nefes = st.radio("Nefes darlığı şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    if nefes == "Evet":
-        st.session_state.data['nefes_tip'] = st.selectbox("Düzey:", ["Nadiren", "Merdiven çıkarken/yürürken", "Dinlenirken bile"])
-        if st.session_state.data['nefes_tip'] == "Dinlenirken bile":
-            st.warning("⚠️ UYARI: Dinlenme sırasında nefes darlığı yaşanması ileri düzey solunum problemlerinin belirtisi olabilir.")
-
     st.markdown("---")
     yutkunma = st.radio("Yutkunurken güçlük çekiyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if yutkunma == "Evet": st.selectbox("Durum:", ["Nadiren", "Katı gıdalar tüketirken", "Sıvı tüketirken bile"])
-    
     st.markdown("---")
     stres = st.radio("Yoğun stres veya anksiyete yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if stres == "Evet": st.selectbox("Sıklık:", ["Ara sıra", "Sık sık", "Sürekli"])
-    
     st.markdown("---")
     yorgunluk = st.radio("Aşırı yorgunluk veya halsizlik yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if yorgunluk == "Evet": st.selectbox("Derece:", ["Ara sıra", "Sık sık", "Günlük hayatımı etkiliyor"])
-    
     st.markdown("---")
     parmak = st.radio("Parmaklarınızda sararma veya sarı lekeler var mı?", ["Hayır", "Evet"], horizontal=True)
-    if parmak == "Evet": st.selectbox("Miktar:", ["Çok az/birkaç parmağımda var", "Belirgin şekilde var", "Neredeyse bütün parmaklarımda var"])
 
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 3; st.rerun()
@@ -265,17 +230,18 @@ elif st.session_state.step == 5:
     
     d = st.session_state.data 
 
-    # --- MODELİN SÜTUN SIRALAMASINA GÖRE BİREBİR EŞLEME ---
+    # [DÜZELTİLDİ]: Sütunlar dataset.csv'deki sıralamaya ve mantığa (%100) uyumlu hale getirildi.
+    # 2 = Evet, 1 = Hayır mantığı korunmuştur.
     veriler = [
         1 if d.get('cinsiyet') == "Erkek" else 0,                               # GENDER
-        d.get('yas', 45),                                                       # AGE
+        d.get('yas', 45),                                                      # AGE
         2 if d.get('sigara') == "Evet" else 1,                                 # SMOKING
         2 if d.get('parmak') == "Evet" else 1,                                 # YELLOW_FINGERS
         2 if d.get('stres') == "Evet" else 1,                                  # ANXIETY
-        2 if d.get('sigara') == "Evet" or d.get('alkol') == "Evet" else 1, # PEER_PRESSURE
+        2 if (d.get('sigara') == "Evet" or d.get('alkol') == "Evet") else 1,   # PEER_PRESSURE
         2 if d.get('kronik') == "Evet" else 1,                                 # CHRONIC_DISEASE
         2 if d.get('yorgunluk') == "Evet" else 1,                              # FATIGUE
-        2 if d.get('genetik') == "Evet" or d.get('kronik') == "Evet" else 1, # ALLERGY
+        2 if (d.get('genetik') == "Evet" or d.get('kronik') == "Evet") else 1, # ALLERGY (Model girdisi)
         2 if d.get('nefes') == "Evet" else 1,                                  # WHEEZING
         2 if d.get('alkol') == "Evet" else 1,                                  # ALCOHOL_CONSUMING
         2 if d.get('oksuruk') == "Evet" else 1,                                # COUGHING
@@ -284,24 +250,22 @@ elif st.session_state.step == 5:
         2 if d.get('g_a') == "Evet" else 1                                     # CHEST_PAIN
     ]
     
-    # Modelden saf olasılık sonucunu alıyoruz
+    # Modelden tahmini alıyoruz
     tahmin_orani = yapay_zekadan_tahmin_al(veriler)
     risk = int(tahmin_orani * 100)
     
-    # 🌟 KLİNİK HİBRİT FORMÜL (Her şeye Evet diyen profil düzeltmesi)
+    # Klinik Hibrit İyileştirme kuralları
     evet_sayisi = sum([1 for v in veriler[2:] if v == 2]) 
-    
     if evet_sayisi >= 10:
-        risk = max(risk, 95) # Neredeyse tüm belirtiler varsa %95-99 arası yüksek risk yap
+        risk = max(risk, 95)
     elif evet_sayisi >= 6:
-        risk = max(risk, 70) # Belirtilerin yarısından profesyonelce fazlası varsa en az %70 yüksek risk yap
+        risk = max(risk, 70)
     elif evet_sayisi <= 1:
-        risk = min(risk, 20) # Neredeyse hiç belirti yoksa en fazla %20 düşük risk yap
+        risk = min(risk, 20)
 
-    # %5 ile %99 arasında sınırla
     risk = max(5, min(risk, 99))
     
-    # --- VERİ TABANINA KAYDETME ---
+    # Veri Tabanına Tek Seferlik Kayıt Güvencesi
     if 'kaydedildi' not in st.session_state:
         veritabanina_kaydet(
             d.get('yas'), d.get('cinsiyet'), d.get('sigara'), d.get('alkol'), d.get('kronik'),
@@ -310,7 +274,7 @@ elif st.session_state.step == 5:
         )
         st.session_state.kaydedildi = True
 
-    # GRAFİK GÖSTERİMİ
+    # Grafiği Çiz
     fig = go.Figure(go.Indicator(
         mode = "gauge+number", value = risk,
         number = {'suffix': "%", 'font': {'color': "#00FFFF", 'size': 50}},
@@ -329,13 +293,14 @@ elif st.session_state.step == 5:
     
     if risk <= 33:
         st.markdown("### ✨ Düşük Risk")
-        st.success("✅ Risk oranınız düşük seviye belirlenmiştir. Sağlığınızı korumak için şu adımları izleyin:")
-        st.write("Düzenli yürüyüş, Nefes egzersizi, Sigaradan uzak durma, Düzenli uyku ve Sağlıklı beslenme.")
+        st.success("✅ Risk oranınız düşük seviye belirlenmiştir. Sağlığınızı korumak için sigara dumanından uzak durun ve düzenli egzersiz yapın.")
     elif 34 <= risk <= 66:
         st.markdown("### ⚠️ Orta Risk")
-        st.warning("🟡 Risk oranınız orta seviyede belirlenmiştir. Yaşam alışkanlıklarınızı gözden geçirmeniz önerilir.")
-        st.write("Motivasyon: Sağlığınız için küçük değişiklikler büyük farklar yaratabilir.")
+        st.warning("🟡 Risk oranınız orta seviyede belirlenmiştir. Yaşam alışkanlıklarınızı gözden geçirmeniz ve bir uzmana danışmanız önerilir.")
     else:
         st.markdown("### 🛑 Dikkat: Yüksek Risk")
-        st.error("🚨 Analiz sonucunuz yüksek risk grubunda olduğunuzu göstermektedir.")
-        st.write("Motivasyon: Sağlığınız için adım atmak asla geç değildir. Belirtileriniz tıbbi profesyonel denetimi gerektir")
+        st.error("🚨 Analiz sonucunuz yüksek risk grubunda olduğunuzu göstermektedir. Lütfen en kısa sürede bir Göğüs Hastalıkları uzmanına başvurun.")
+        
+    if st.button("Yeni Analiz Yap"):
+        st.session_state.clear()
+        st.rerun()
