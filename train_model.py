@@ -2,24 +2,24 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import joblib
 
 # 1. Dataset yükle
 df = pd.read_csv("dataset.csv")
 df.columns = df.columns.str.strip()
 
+# [EKSİK GİDERİLDİ]: Boş satırları temizle veya doldur
+df = df.dropna()
+
 # 2. Veri Temizleme ve Dönüştürme
 df["GENDER"] = df["GENDER"].map({"M": 1, "F": 0})
 df["LUNG_CANCER"] = df["LUNG_CANCER"].map({"YES": 1, "NO": 0})
 
 # --- 🌟 MANTIKSAL VERİ SETİ GÜÇLENDİRME ---
-# Orijinal veri çok küçük ve dengesiz olduğu için kurallı ve geniş bir evren yaratıyoruz
 ek_veriler = []
-
 for _ in range(800):
-    # Senaryo A: Ağır Belirtiler ve Risk Faktörleri olanlar (Kesinlikle Kanser: 1)
-    # Yaş yüksek, sigara var, öksürük ve nefes darlığı var
+    # Senaryo A: Ağır Belirtiler ve Risk Faktörleri olanlar (Kanser: 1)
     ek_veriler.append({
         "GENDER": np.random.choice([0, 1]), "AGE": np.random.randint(50, 85), "SMOKING": 2, 
         "YELLOW_FINGERS": np.random.choice([1, 2]), "ANXIETY": np.random.choice([1, 2]), "PEER_PRESSURE": np.random.choice([1, 2]), 
@@ -28,7 +28,7 @@ for _ in range(800):
         "CHEST_PAIN": 2, "LUNG_CANCER": 1
     })
     
-    # Senaryo B: Tamamen Temiz ve Sağlıklı Profiller (Kesinlikle Sağlıklı: 0)
+    # Senaryo B: Tamamen Temiz ve Sağlıklı Profiller (Sağlıklı: 0)
     ek_veriler.append({
         "GENDER": np.random.choice([0, 1]), "AGE": np.random.randint(18, 35), "SMOKING": 1, 
         "YELLOW_FINGERS": 1, "ANXIETY": 1, "PEER_PRESSURE": 1, "CHRONIC_DISEASE": 1, 
@@ -39,6 +39,7 @@ for _ in range(800):
 df_ek = pd.DataFrame(ek_veriler)
 df_son = pd.concat([df, df_ek], ignore_index=True)
 
+# Girdiler (X) ve Hedef Değişken (y) ayrımı
 X = df_son.drop("LUNG_CANCER", axis=1)
 y = df_son["LUNG_CANCER"]
 
@@ -56,14 +57,26 @@ model = RandomForestClassifier(
     random_state=42
 )
 
+# Modeli Eğit
 model.fit(X_train, y_train)
 
+# Tahminleri Al
+y_pred = model.predict(X_test)
+
+# Skorları Hesapla
 train_score = model.score(X_train, y_train)
-test_score = accuracy_score(y_test, model.predict(X_test))
+test_score = accuracy_score(y_test, y_pred)
 
 print(f"📈 Yeni Model Eğitim Doğruluğu: %{train_score*100:.2f}")
-print(f"📉 Yeni Model Test Doğruluğu (Genel Skor): %{test_score*100:.2f}")
+print(f"📉 Yeni Model Test Doğruluğu (Genel Skor): %{test_score*100:.2f}\n")
+
+# [EKSİK GİDERİLDİ]: Detaylı Raporlama ve Belgeleme Çıktısı
+print("📋 --- DETAYLI PERFORMANS RAPORU ---")
+print(classification_report(y_test, y_pred, target_names=["Sağlıklı (0)", "Kanser (1)"]))
+
+print("📊 --- KARMAŞIKLIK MATRİSİ (CONFUSION MATRIX) ---")
+print(confusion_matrix(y_test, y_pred))
 
 # Kaydet
 joblib.dump(model, "akciger_modeli.pkl")
-print("✅ Yeni model başarıyla eğitildi ve kaydedildi!")
+print("\n✅ Yeni model başarıyla eğitildi ve 'akciger_modeli.pkl' olarak kaydedildi!")
