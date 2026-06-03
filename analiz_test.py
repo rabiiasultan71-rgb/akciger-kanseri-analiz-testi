@@ -8,38 +8,53 @@ import numpy as np
 import psycopg2
 from datetime import datetime
 
-# --- VERİ TABANI AYARLARI ---
-DB_URL = "postgresql://akciger_db_user:xeQBXDVpJZbklqVjpn7qlUF2iYbklKOB@dpg-d845m3l7vvec73evr6hg-a.virginia-postgres.render.com/akciger_db"
+import sqlite3 # PostgreSQL yerine SQLite kullanıyoruz
 
 def veritabani_kur():
-    """Render PostgreSQL üzerinde tablo yoksa otomatik oluşturur"""
-    try:
-        conn = psycopg2.connect(DB_URL)
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS analizler (
-                id SERIAL PRIMARY KEY,
-                tarih TEXT,
-                yas INTEGER,
-                cinsiyet TEXT,
-                sigara TEXT,
-                alkol TEXT,
-                kronik TEXT,
-                gogus_agrisi TEXT,
-                oksuruk TEXT,
-                nefes_darligi TEXT,
-                yutkunma_guclugu TEXT,
-                stres_anksiyete TEXT,
-                yorgunluk TEXT,
-                parmak_sararma TEXT,
-                risk_skoru INTEGER
-            )
-        """)
-        conn.commit()
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        st.error(f"Veri tabanı kurulum hatası: {e}")
+    """Yerel SQLite dosyası oluşturur ve tabloyu hazırlar"""
+    conn = sqlite3.connect("akciger_analiz.db") # Kodun olduğu klasöre .db dosyası açar
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS analizler (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tarih TEXT, yas INTEGER, cinsiyet TEXT, sigara TEXT, 
+            sigara_siklik TEXT, alkol TEXT, alkol_siklik TEXT, 
+            kronik TEXT, kronik_tip TEXT, genetik TEXT, genetik_yakinlik TEXT,
+            gogus_agrisi TEXT, gogus_agrisi_tip TEXT, 
+            oksuruk TEXT, oksuruk_suresi TEXT, 
+            nefes_darligi TEXT, nefes_darligi_durum TEXT, 
+            yutkunma_guclugu TEXT, yutkunma_tip TEXT, 
+            stres_anksiyete TEXT, yorgunluk TEXT, 
+            parmak_sararma TEXT, risk_skoru INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def veritabanina_kaydet(d, risk):
+    """Verileri yerel SQLite dosyasındaki analizler tablosuna yazar"""
+    conn = sqlite3.connect("akciger_analiz.db")
+    cursor = conn.cursor()
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    cursor.execute("""
+        INSERT INTO analizler (
+            tarih, yas, cinsiyet, sigara, sigara_siklik, alkol, alkol_siklik, 
+            kronik, kronik_tip, genetik, genetik_yakinlik, gogus_agrisi, gogus_agrisi_tip,
+            oksuruk, oksuruk_suresi, nefes_darligi, nefes_darligi_durum, 
+            yutkunma_guclugu, yutkunma_tip, stres_anksiyete, yorgunluk, 
+            parmak_sararma, risk_skoru
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        tarih, d.get('yas'), d.get('cinsiyet'), d.get('sigara'), d.get('sigara_siklik', 'Yok'),
+        d.get('alkol'), d.get('alkol_siklik', 'Yok'), d.get('kronik'), d.get('kronik_tip', 'Yok'),
+        d.get('genetik'), d.get('genetik_yakinlik', 'Yok'), d.get('g_a'), d.get('g_a_detay', 'Yok'),
+        d.get('oksuruk'), d.get('oksuruk_detay', 'Yok'), d.get('nefes'), d.get('nefes_detay', 'Yok'),
+        d.get('yutkunma'), d.get('yutkunma_detay', 'Yok'), d.get('stres'), d.get('yorgunluk'),
+        d.get('parmak'), risk
+    ))
+    conn.commit()
+    conn.close()
 
 # İlk açılışta kontrol et
 veritabani_kur()
