@@ -37,7 +37,7 @@ def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefe
     conn.commit()
     conn.close()
     st.toast("💾 Veriler SQL veri tabanına başarıyla kaydedildi!", icon="💾")
-    
+
 # --- MODELİ YÜKLEME ---
 @st.cache_resource
 def model_yukle():
@@ -302,3 +302,14 @@ elif st.session_state.step == 5:
     if st.button("Yeni Analiz Yap"):
         st.session_state.clear()
         st.rerun()
+       
+st.markdown("---")
+if st.button("SQL Veri Tabanındaki Kayıtları Gör"):
+    try:
+        conn = sqlite3.connect("akciger_analiz.db")
+        import pandas as pd
+        df = pd.read_sql_query("SELECT * FROM analizler", conn)
+        st.dataframe(df) # Hocan burada tabloları ve verileri görecek!
+        conn.close()
+    except Exception as e:
+        st.warning("Henüz veri tabanında kayıt bulunmuyor.")
