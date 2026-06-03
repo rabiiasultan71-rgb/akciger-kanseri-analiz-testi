@@ -161,37 +161,67 @@ if st.session_state.step == 1:
 # --- ADIM 2: SAĞLIK GEÇMİŞİ VE GENETİK ---
 elif st.session_state.step == 2:
     st.title("🧬 Adım 2: Sağlık ve Genetik")
-    kronik = st.radio("Kronik bir rahatsızlığınız var mı?", ["Hayır", "Evet"], horizontal=True)
-    if kronik == "Evet":
-        st.session_state.data['kronik_tip'] = st.selectbox("Nedir?", ["Seçiniz", "KOAH", "Astım", "Bronşit", "Diğer"])
+    
+    # 1. Genetik Sorgu
+    genetik = st.radio("Ailenizde akciğer kanseri genetiği var mı?", ["Hayır", "Evet"], horizontal=True)
+    if genetik == "Evet":
+        yakinlik = st.selectbox("Yakınlık derecesi nedir?", 
+                                ["Seçiniz", "1. Derece (Anne, Baba, Kardeş)", 
+                                 "2. Derece (Dede, Nene, Amca, Hala, Dayı, Teyze)", 
+                                 "3. Derece ve sonrası", "Diğer"])
+        st.session_state.data['genetik_yakinlik'] = yakinlik
     
     st.markdown("---")
-    genetik = st.radio("Ailenizde akciğer kanseri genetiği var mı?", ["Hayır", "Evet"], horizontal=True)
     
+    # 2. Kronik Hastalık
+    kronik = st.radio("Kronik bir rahatsızlığınız var mı?", ["Hayır", "Evet"], horizontal=True)
+    if kronik == "Evet":
+        st.session_state.data['kronik'] = "Evet"
+        kronik_tip = st.selectbox("Hastalık türü:", ["Seçiniz", "KOAH", "Astım", "Bronşit", "Diğer"])
+        st.session_state.data['kronik_tip'] = kronik_tip
+
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 1; st.rerun()
-    if col2.button("İlerle"): 
-        if kronik == "Evet" and st.session_state.data.get('kronik_tip') == "Seçiniz":
-            st.error("🚨 Lütfen kronik rahatsızlık tipini seçiniz.")
+    if col2.button("İlerle"):
+        if genetik == "Evet" and st.session_state.data.get('genetik_yakinlik', "Seçiniz") == "Seçiniz":
+            st.error("🚨 Lütfen yakınlık derecesini seçiniz.")
         else:
-            st.session_state.data['kronik'] = kronik
             st.session_state.data['genetik'] = genetik
             st.session_state.step = 3; st.rerun()
 
 # --- ADIM 3: ALIŞKANLIKLAR ---
 elif st.session_state.step == 3:
     st.title("🚬 Adım 3: Alışkanlıklar")
+    
+    # Sigara Bölümü
     sigara = st.radio("Sigara kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
+    if sigara == "Evet":
+        st.warning("⚠️ Sigara sağlığınız için oldukça zararlıdır. Bırakmanız tavsiye edilir.")
+        sigara_siklik = st.selectbox("Kullanım sıklığı:", ["Seçiniz", "Ara sıra", "Günde yarım paket", "Günde 1 paket", "Günde 2+ paket"])
+        st.session_state.data['sigara_siklik'] = sigara_siklik
     
     st.markdown("---")
+    
+    # Alkol Bölümü
     alkol = st.radio("Alkol kullanıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
+    if alkol == "Evet":
+        alkol_siklik = st.selectbox("Kullanım sıklığı:", ["Seçiniz", "Özel günlerde", "Haftada bir", "Haftada 2-3 gün", "Her gün"])
+        st.session_state.data['alkol_siklik'] = alkol_siklik
 
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 2; st.rerun()
-    if col2.button("İlerle"): 
-        st.session_state.data['sigara'] = sigara
-        st.session_state.data['alkol'] = alkol
-        st.session_state.step = 4; st.rerun()
+    if col2.button("İlerle"):
+        # Hata kontrolü
+        if sigara == "Evet" and st.session_state.data.get('sigara_siklik', "Seçiniz") == "Seçiniz":
+            st.error("🚨 Lütfen sigara kullanım sıklığınızı seçiniz.")
+        elif alkol == "Evet" and st.session_state.data.get('alkol_siklik', "Seçiniz") == "Seçiniz":
+            st.error("🚨 Lütfen alkol kullanım sıklığınızı seçiniz.")
+        else:
+            st.session_state.data['sigara'] = sigara
+            st.session_state.data['alkol'] = alkol
+            st.session_state.step = 4; st.rerun()
+
+
 
 # --- ADIM 4: BELİRTİLER ---
 elif st.session_state.step == 4:
