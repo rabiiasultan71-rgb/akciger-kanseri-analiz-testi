@@ -1,86 +1,43 @@
+import sqlite3
+from datetime import datetime
 import streamlit as st
+import joblib
+import numpy as np
 import plotly.graph_objects as go
 import base64
 import os
-import time
-import joblib
-import numpy as np
-import psycopg2
-from datetime import datetime
 
-import sqlite3 # PostgreSQL yerine SQLite kullanıyoruz
-
+# --- SQLİTE (YEREL SQL) AYARLARI ---
 def veritabani_kur():
-    """Yerel SQLite dosyası oluşturur ve tabloyu hazırlar"""
-    conn = sqlite3.connect("akciger_analiz.db") # Kodun olduğu klasöre .db dosyası açar
+    conn = sqlite3.connect("akciger_analiz.db")
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS analizler (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tarih TEXT, yas INTEGER, cinsiyet TEXT, sigara TEXT, 
-            sigara_siklik TEXT, alkol TEXT, alkol_siklik TEXT, 
-            kronik TEXT, kronik_tip TEXT, genetik TEXT, genetik_yakinlik TEXT,
-            gogus_agrisi TEXT, gogus_agrisi_tip TEXT, 
-            oksuruk TEXT, oksuruk_suresi TEXT, 
-            nefes_darligi TEXT, nefes_darligi_durum TEXT, 
-            yutkunma_guclugu TEXT, yutkunma_tip TEXT, 
-            stres_anksiyete TEXT, yorgunluk TEXT, 
-            parmak_sararma TEXT, risk_skoru INTEGER
+            alkol TEXT, kronik TEXT, gogus_agrisi TEXT, 
+            oksuruk TEXT, nefes_darligi TEXT, yutkunma_guclugu TEXT, 
+            stres_anksiyete TEXT, yorgunluk TEXT, parmak_sararma TEXT, risk_skoru INTEGER
         )
     """)
     conn.commit()
     conn.close()
 
-def veritabanina_kaydet(d, risk):
-    """Verileri yerel SQLite dosyasındaki analizler tablosuna yazar"""
-    conn = sqlite3.connect("akciger_analiz.db")
-    cursor = conn.cursor()
-    tarih = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    cursor.execute("""
-        INSERT INTO analizler (
-            tarih, yas, cinsiyet, sigara, sigara_siklik, alkol, alkol_siklik, 
-            kronik, kronik_tip, genetik, genetik_yakinlik, gogus_agrisi, gogus_agrisi_tip,
-            oksuruk, oksuruk_suresi, nefes_darligi, nefes_darligi_durum, 
-            yutkunma_guclugu, yutkunma_tip, stres_anksiyete, yorgunluk, 
-            parmak_sararma, risk_skoru
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    """, (
-        tarih, d.get('yas'), d.get('cinsiyet'), d.get('sigara'), d.get('sigara_siklik', 'Yok'),
-        d.get('alkol'), d.get('alkol_siklik', 'Yok'), d.get('kronik'), d.get('kronik_tip', 'Yok'),
-        d.get('genetik'), d.get('genetik_yakinlik', 'Yok'), d.get('g_a'), d.get('g_a_detay', 'Yok'),
-        d.get('oksuruk'), d.get('oksuruk_detay', 'Yok'), d.get('nefes'), d.get('nefes_detay', 'Yok'),
-        d.get('yutkunma'), d.get('yutkunma_detay', 'Yok'), d.get('stres'), d.get('yorgunluk'),
-        d.get('parmak'), risk
-    ))
-    conn.commit()
-    conn.close()
-
-# İlk açılışta kontrol et
 veritabani_kur()
 
 def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk):
-    """Kullanıcı verilerini kalıcı olarak Render PostgreSQL'e kaydeder"""
-    try:
-        conn = psycopg2.connect(DB_URL)
-        cursor = conn.cursor()
-        tarih_suan = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        cursor.execute("""
-            INSERT INTO analizler (
-                tarih, yas, cinsiyet, sigara, alkol, kronik, gogus_agrisi, 
-                oksuruk, nefes_darligi, yutkunma_guclugu, stres_anksiyete, 
-                yorgunluk, parmak_sararma, risk_skoru
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (tarih_suan, yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        st.toast("💾 Analiz verileri başarıyla bulut veri tabanına kaydedildi!", icon="💾")
-    except Exception as e:
-        st.error(f"Veri tabanına kaydetme hatası: {e}")
-
+    conn = sqlite3.connect("akciger_analiz.db")
+    cursor = conn.cursor()
+    tarih = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO analizler (tarih, yas, cinsiyet, sigara, alkol, kronik, gogus_agrisi, 
+        oksuruk, nefes_darligi, yutkunma_guclugu, stres_anksiyete, yorgunluk, parmak_sararma, risk_skoru)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (tarih, yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk))
+    conn.commit()
+    conn.close()
+    st.toast("💾 Veriler SQL veri tabanına başarıyla kaydedildi!", icon="💾")
+    
 # --- MODELİ YÜKLEME ---
 @st.cache_resource
 def model_yukle():
@@ -238,67 +195,32 @@ elif st.session_state.step == 3:
 elif st.session_state.step == 4:
     st.title("⚠️ Adım 4: Belirtiler")
     
-    # 1. Göğüs Ağrısı
     g_a = st.radio("Göğsünüzde ağrı veya baskı hissi var mı?", ["Hayır", "Evet"], horizontal=True)
-    if g_a == "Evet":
-        g_a_detay = st.selectbox("Ağrı tipi:", ["Seçiniz", "Batma hissi", "Baskı şeklinde", "Sürekli ağrı"], key="ga_detay")
-        st.session_state.data['g_a_detay'] = g_a_detay
-
-    # 2. Öksürük
+    st.markdown("---")
     oksuruk = st.radio("Sürekli öksürük şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    if oksuruk == "Evet":
-        oksuruk_detay = st.selectbox("Süre:", ["Seçiniz", "1-2 haftadır", "1 aydır", "3 aydan fazladır"], key="oks_detay")
-        st.session_state.data['oksuruk_detay'] = oksuruk_detay
-
-    # 3. Nefes Darlığı
+    st.markdown("---")
     nefes = st.radio("Nefes darlığı şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    if nefes == "Evet":
-        nefes_detay = st.selectbox("Durum:", ["Seçiniz", "Hareket halinde", "İstirahat halinde", "Sürekli"], key="nef_detay")
-        st.session_state.data['nefes_detay'] = nefes_detay
-
-    # 4. Yutkunma Güçlüğü
+    st.markdown("---")
     yutkunma = st.radio("Yutkunurken güçlük çekiyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if yutkunma == "Evet":
-        yutkunma_detay = st.selectbox("Zamanlama:", ["Seçiniz", "Sadece katı gıdalar", "Sıvılarda da zorlanma"], key="yut_detay")
-        st.session_state.data['yutkunma_detay'] = yutkunma_detay
-
-    # 5. Stres/Anksiyete
+    st.markdown("---")
     stres = st.radio("Yoğun stres veya anksiyete yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if stres == "Evet":
-        stres_detay = st.select_slider("Düzey:", options=["Hafif", "Orta", "İleri"], key="stres_detay")
-        st.session_state.data['stres_detay'] = stres_detay
-
-    # 6. Yorgunluk
+    st.markdown("---")
     yorgunluk = st.radio("Aşırı yorgunluk veya halsizlik yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    if yorgunluk == "Evet":
-        yorgunluk_detay = st.select_slider("Etki düzeyi:", options=["Günlük işlerimi aksatıyor", "Sürekli yorgunluk"], key="yor_detay")
-        st.session_state.data['yorgunluk_detay'] = yorgunluk_detay
-
-    # 7. Parmak Sararması
+    st.markdown("---")
     parmak = st.radio("Parmaklarınızda sararma veya sarı lekeler var mı?", ["Hayır", "Evet"], horizontal=True)
-    if parmak == "Evet":
-        st.info("Parmaklardaki sararma genellikle sigara kullanımıyla ilişkilidir.")
-        st.session_state.data['parmak_detay'] = "Var"
 
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 3; st.rerun()
     if col2.button("Analiz Et"):
-        # Validasyon: Evet seçilenlerin detayları seçildi mi?
-        if (g_a == "Evet" and st.session_state.data.get('g_a_detay') == "Seçiniz") or \
-           (oksuruk == "Evet" and st.session_state.data.get('oksuruk_detay') == "Seçiniz") or \
-           (nefes == "Evet" and st.session_state.data.get('nefes_detay') == "Seçiniz") or \
-           (yutkunma == "Evet" and st.session_state.data.get('yutkunma_detay') == "Seçiniz"):
-            st.error("🚨 Lütfen işaretlediğiniz belirtilerin detaylarını seçiniz.")
-        else:
-            st.session_state.data['g_a'] = g_a
-            st.session_state.data['oksuruk'] = oksuruk
-            st.session_state.data['nefes'] = nefes
-            st.session_state.data['yutkunma'] = yutkunma
-            st.session_state.data['stres'] = stres
-            st.session_state.data['yorgunluk'] = yorgunluk
-            st.session_state.data['parmak'] = parmak
-            st.session_state.step = 5
-            st.rerun()
+        st.session_state.data['g_a'] = g_a
+        st.session_state.data['oksuruk'] = oksuruk
+        st.session_state.data['nefes'] = nefes
+        st.session_state.data['yutkunma'] = yutkunma
+        st.session_state.data['stres'] = stres
+        st.session_state.data['yorgunluk'] = yorgunluk
+        st.session_state.data['parmak'] = parmak
+        st.session_state.step = 5
+        st.rerun()
 
 # --- ADIM 5: GERÇEKÇİ AI ANALİZ VE VERİ TABANI KAYDI ---
 elif st.session_state.step == 5:
