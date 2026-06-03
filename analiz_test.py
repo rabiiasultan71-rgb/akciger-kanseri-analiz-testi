@@ -191,37 +191,51 @@ elif st.session_state.step == 3:
             st.session_state.data['alkol'] = alkol
             st.session_state.step = 4; st.rerun()
 
-# --- ADIM 4: BELİRTİLER ---
 elif st.session_state.step == 4:
     st.title("⚠️ Adım 4: Belirtiler")
     
-    g_a = st.radio("Göğsünüzde ağrı veya baskı hissi var mı?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    oksuruk = st.radio("Sürekli öksürük şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    nefes = st.radio("Nefes darlığı şikayetiniz var mı?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    yutkunma = st.radio("Yutkunurken güçlük çekiyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    stres = st.radio("Yoğun stres veya anksiyete yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    yorgunluk = st.radio("Aşırı yorgunluk veya halsizlik yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
-    st.markdown("---")
-    parmak = st.radio("Parmaklarınızda sararma veya sarı lekeler var mı?", ["Hayır", "Evet"], horizontal=True)
+    # 1. Göğüs Ağrısı
+    g_a = st.radio("Göğüs ağrısı var mı?", ["Hayır", "Evet"], horizontal=True)
+    g_a_detay = "Yok"
+    if g_a == "Evet":
+        g_a_detay = st.selectbox("Ağrı tipi:", ["Batma", "Baskı", "Sürekli"], key="ga_d")
+
+    # 2. Öksürük
+    oksuruk = st.radio("Sürekli öksürük var mı?", ["Hayır", "Evet"], horizontal=True)
+    oksuruk_detay = "Yok"
+    if oksuruk == "Evet":
+        oksuruk_detay = st.selectbox("Süre:", ["1-2 Hafta", "1 Ay", "3 Ay+"], key="oks_d")
+
+    # 3. Nefes Darlığı
+    nefes = st.radio("Nefes darlığı var mı?", ["Hayır", "Evet"], horizontal=True)
+    nefes_detay = "Yok"
+    if nefes == "Evet":
+        nefes_detay = st.selectbox("Durum:", ["Hareket halinde", "İstirahat halinde"], key="nef_d")
+
+    # 4. Yutkunma Güçlüğü
+    yutkunma = st.radio("Yutkunma güçlüğü var mı?", ["Hayır", "Evet"], horizontal=True)
+    yutkunma_detay = "Yok"
+    if yutkunma == "Evet":
+        yutkunma_detay = st.selectbox("Zamanlama:", ["Katı gıdalar", "Sıvılar"], key="yut_d")
+
+    # Diğerleri (Detaysız)
+    stres = st.radio("Yoğun stres yaşıyor musunuz?", ["Hayır", "Evet"], horizontal=True)
+    yorgunluk = st.radio("Aşırı yorgunluk var mı?", ["Hayır", "Evet"], horizontal=True)
+    parmak = st.radio("Parmak sararması var mı?", ["Hayır", "Evet"], horizontal=True)
 
     col1, col2 = st.columns(2)
     if col1.button("Geri"): st.session_state.step = 3; st.rerun()
     if col2.button("Analiz Et"):
-        st.session_state.data['g_a'] = g_a
-        st.session_state.data['oksuruk'] = oksuruk
-        st.session_state.data['nefes'] = nefes
-        st.session_state.data['yutkunma'] = yutkunma
-        st.session_state.data['stres'] = stres
-        st.session_state.data['yorgunluk'] = yorgunluk
-        st.session_state.data['parmak'] = parmak
+        st.session_state.data.update({
+            'g_a': g_a, 'g_a_detay': g_a_detay,
+            'oksuruk': oksuruk, 'oksuruk_detay': oksuruk_detay,
+            'nefes': nefes, 'nefes_detay': nefes_detay,
+            'yutkunma': yutkunma, 'yutkunma_detay': yutkunma_detay,
+            'stres': stres, 'yorgunluk': yorgunluk, 'parmak': parmak
+        })
         st.session_state.step = 5
         st.rerun()
-
+        
 # --- ADIM 5: GERÇEKÇİ AI ANALİZ VE VERİ TABANI KAYDI ---
 elif st.session_state.step == 5:
     st.title("📊 Akıllı Risk Analiz Raporu")
