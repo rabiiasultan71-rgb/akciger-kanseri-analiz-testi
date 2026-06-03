@@ -294,7 +294,7 @@ elif st.session_state.step == 5:
         st.session_state.kaydedildi = True
         st.toast("💾 Analiz verileri başarıyla SQLite veri tabanına kaydedildi!", icon="💾")
 
-    # GRAFİK GÖSTERİMİ
+# GRAFİK GÖSTERİMİ
     fig = go.Figure(go.Indicator(
         mode = "gauge+number", value = risk,
         number = {'suffix': "%", 'font': {'color': "#00FFFF", 'size': 50}},
@@ -304,7 +304,8 @@ elif st.session_state.step == 5:
             'steps': [
                 {'range': [0, 33], 'color': "#055630"},
                 {'range': [34, 66], 'color': "#eabb02"},
-                {'range': [67, 100], 'color': "#af1313"}]
+                # BURAYI GÜNCELLEDİK: #af1313e0 yerine sadece #af1313 yazdık
+                {'range': [67, 100], 'color': "#af1313"} 
         }))
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"}, height=300)
     st.plotly_chart(fig, use_container_width=True)
