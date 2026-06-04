@@ -278,7 +278,7 @@ elif st.session_state.step == 5:
     elif evet_sayisi >= 6:
         risk = max(risk, 70) 
     elif evet_sayisi <= 1:
-        risk = min(risk, 20) p
+        risk = min(risk, 20) 
 
     risk = max(5, min(risk, 99))
     
