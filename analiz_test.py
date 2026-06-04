@@ -306,7 +306,9 @@ elif st.session_state.step == 5:
                 {'range': [34, 66], 'color': "#eabb02"},
                 # BURAYI GÜNCELLEDİK: #af1313e0 yerine sadece #af1313 yazdık
                 {'range': [67, 100], 'color': "#af1313"} 
+            ]
         }))
+        
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font={'color': "white"}, height=300)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -336,7 +338,7 @@ elif st.session_state.step == 5:
     is_first_degree = d.get('yakinlik') == " Anne-Baba-Kardeş"
     if d.get('genetik') == "Evet":
         if risk > 66 and is_first_degree:
-            st.error("⚠️ Birinci derece akrabalarınızda kanser öyküsü ve yüksek risk skorunuz sebebiyle tarama yaptırmanız hayati önem taşıyabilir.")
+            st.error("⚠️ Birinci derece akrabalarınızda kanser genetiği ve yüksek risk skorunuz sebebiyle tarama yaptırmanız hayati önem taşıyabilir.")
 
     if st.button("Yeni Analiz Yap"):
         st.session_state.step = 1
