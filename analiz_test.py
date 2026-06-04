@@ -302,7 +302,6 @@ elif st.session_state.step == 5:
             'steps': [
                 {'range': [0, 33], 'color': "#055630"},
                 {'range': [34, 66], 'color': "#eabb02"},
-                # BURAYI GÜNCELLEDİK: #af1313e0 yerine sadece #af1313 yazdık
                 {'range': [67, 100], 'color': "#af1313"} 
             ]
         }))
