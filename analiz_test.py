@@ -34,7 +34,6 @@ def veritabani_kur():
     conn.commit()
     conn.close()
 
-# Veri tabanını ilk açılışta oluştur
 veritabani_kur()
 
 def veritabanina_kaydet(yas, cinsiyet, sigara, alkol, kronik, g_a, oksuruk, nefes, yutkunma, stres, yorgunluk, parmak, risk):
@@ -64,7 +63,7 @@ model = model_yukle()
 def yapay_zekadan_tahmin_al(veriler):
     if model is not None:
         dizi = np.array(veriler).reshape(1, -1)
-        # Sınıf olasılığını alıyoruz (% risk hesabı için)
+       
         tahmin_olasiligi = model.predict_proba(dizi)[0][1]
         return tahmin_olasiligi
     return 0.35
@@ -267,21 +266,20 @@ elif st.session_state.step == 5:
         2 if d.get('g_a') == "Evet" else 1                             # CHEST_PAIN
     ]
     
-    # Modelden saf olasılık sonucunu alıyoruz
+  
     tahmin_orani = yapay_zekadan_tahmin_al(veriler)
     risk = int(tahmin_orani * 100)
     
-    # 🌟 KLİNİK HİBRİT FORMÜL (Her şeye Evet diyen profil düzeltmesi)
+   
     evet_sayisi = sum([1 for v in veriler[2:] if v == 2]) 
     
     if evet_sayisi >= 10:
-        risk = max(risk, 95) # Neredeyse tüm belirtiler varsa %95-99 arası yüksek risk yap
+        risk = max(risk, 95) 
     elif evet_sayisi >= 6:
-        risk = max(risk, 70) # Belirtilerin yarısından profesyonelce fazlası varsa en az %70 yüksek risk yap
+        risk = max(risk, 70) 
     elif evet_sayisi <= 1:
-        risk = min(risk, 20) # Neredeyse hiç belirti yoksa en fazla %20 düşük risk yap
+        risk = min(risk, 20) p
 
-    # %5 ile %99 arasında sınırla
     risk = max(5, min(risk, 99))
     
     # --- VERİ TABANINA KAYDETME ---
